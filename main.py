@@ -4,7 +4,10 @@ import webbrowser
 import pyttsx3
 import musicLibrary
 import random
+from openai import OpenAI
 
+client = OpenAI()  # Automatically reads API key from environment variable OPENAI_API_KEY
+# client = OpenAI(api_key="sk-NEWKEYHERE") # Uncomment and set your API key here if not using environment variable
 recognizer = sr.Recognizer()
 engine = pyttsx3.init()
 
@@ -12,8 +15,23 @@ def speak(text):
     engine.say(text)
     engine.runAndWait()
 
-def processCommand(c):
+def ask_openai(question):
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "Answer briefly and clearly for voice output."},
+                {"role": "user", "content": question}
+            ],
+            max_tokens=100
+        )
+        return response.choices[0].message.content.strip()
+    except:
+        return "Sorry, I couldn't reach OpenAI right now."
 
+    
+
+def processCommand(c):
     speak(c)
     print(c)
 
@@ -31,13 +49,24 @@ def processCommand(c):
     
     elif("open amazon" in c.lower()):
         webbrowser.open("https://www.amazon.in/")
-    elif(c.lower().startswith("play")):
+
+    elif(c.lower().startswith("play") or c.lower().startswith("play song")):
         try:
             song = c.lower().split(" ")[1]
             link = musicLibrary.music[song]
             webbrowser.open(link)
         except KeyError:
             speak("Song not found in your music library.")
+    elif "exit" in c.lower() or "stop" in c.lower():
+        speak("Goodbye!")
+        exit()
+    
+    else:
+        # OPENAI Calling for other queries
+        speak("Let me think...")
+        answer = ask_openai(c)
+        print("Jarvis:", answer)
+        speak(answer)
             
 
 if(__name__ == "__main__"):
@@ -73,7 +102,3 @@ if(__name__ == "__main__"):
             print("error; {0}".format(e))
         except sr.RequestError as e:
             print("API error; {0}".format(e))
-
-
-
-
